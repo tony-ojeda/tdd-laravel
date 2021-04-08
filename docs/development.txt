@@ -1,0 +1,6 @@
+$composer create-project laravel/laravel --prefer-dist tdd-laravel
+
+$composer require laravel/jetstream
+$php artisan jetstream:install livewire
+
+$npm install or $npm run dev
