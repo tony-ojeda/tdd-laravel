@@ -4,3 +4,171 @@ $composer require laravel/jetstream
 $php artisan jetstream:install livewire
 
 $npm install or $npm run dev
+
++-----  in config/jetstream.php ----+
+Features::profilePhotos() #uncomment for profile user with photos
+
+php artisan make:test Models/Usertest --unit
+
+
++-----  add in UserTest.php ----+
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use PHPUnit\Framework\TestCase;
+
+class UserTest extends TestCase
+{
+	public function test_has_many_repositories()
+	{
+		$user = new User;
+		$this->assertInstanceOf(Collection::class, $user->repositories);
+	}
+}
+
+$php artisan make:model Repository -mf
+
+
++-----  add in Models/User.php ----+
+		public function  repositories() {
+			return $this->hasMany(Repository::class)
+		}
+
+
++-----------------------+  
+|  modify in UserTest.php  |
++-----------------------+
+use PHPUnit\Framework\TestCase;  --> Tests/TestCase;
+
+$php artisan make:test Models/RepositoryTest --unit
+
++-----------------------------+  
+|  add in RepositoryTest.php  |
++-----------------------------+
+use Tests\TestCase;
+
+class RepositoryTest extends TestCase
+{
+    public function test_belongs_to_user()
+    {
+			$repository = Repository::factory()->create();
+
+			$this->assertInstanceOf(User::class, $repository->user);
+    }
+}
+
++-------------------------+  
+|  add in Repository.php  |
++-------------------------+
+	public function user()
+	{
+		return $this->belongsTo(User::class);
+	}
+
+
++-----------------------------------+  
+|  modify in RepositoryFactory.php  |
++-----------------------------------+
+    public function definition()
+    {
+        return [
+					'user_id' => User::factory(),
+        ];
+    }
+
++-----------------------------------------+  
+|  modify in create_repository_table.php  |
++-----------------------------------------+
+	$table->unsignedBigInteger('user_id');
+	$table->foreign('user_id')->references('id')->on('users');
+
++----------------------------+  
+|  uncomment in phpunit.xml  |
++----------------------------+  
+		<server name="DB_CONNECTION" value="sqlite"/>
+		<server name="DB_DATABASE" value=":memory:"/>
+
++------------------+  
+|  modify in .env  |
++------------------+  
+DB_DATABASE=tdd
+
+
++--------------------------------+  
+|  modify in RepositoryTest.php  |
++--------------------------------+  
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+class RepositoryTest extends TestCase
+{
+	use RefreshDatabase;
+	.
+	.
+
+$php artisan make:test Http/Controllers/RepositoryControllerTest
+
+$php artisan make:controller RepositoryController
+
++------------------------------------------+  
+|  modify in RepositoryControllerTest.php  |
++------------------------------------------+  
+	public function test_guest()
+	{
+		$this->get('repositories')->assertRedirect('login');
+	}
+
++------------------+  
+|  add in web.php  |
++------------------+  
+Route::resource('repositories', App\Http\Controllers\RepositoryController::class)
+	->middleware('auth');
+
++---------------------------------------+  
+|  add in RepositoryControllerTest.php  |
++---------------------------------------+  
+	public function test_store()
+	{
+		$data = [
+			'url' => $this->faker->url,
+			'description' => $this->faker->text,
+		];
+
+		$user = User::factory()->create();
+
+		$this
+			->actingAs($user)
+			->post('repositories', $data)
+			->assertRedirect('repositories');
+
+		$this->assertDatabaseHas('repositories', $data);
+	}
+
+
++-----------------------------------+  
+|  add in RepositoryController.php  |
++-----------------------------------+  
+	public function store(Request $request)
+	{
+		$request->user()->repositories()->create($request->all());
+
+		return redirect()->route('repositories.index');
+	}
+
++----------------------------------------+  
+|  add in create_repositories_table.php  |
++----------------------------------------+  
+		$table->string('url');
+		$table->text('description');
+
++--------------------------------+  
+|  add in RepositoryFactory.php  |
++--------------------------------+  
+		'url' => $this->faker->url,
+		'description' => $this->faker->text,
+
++-------------------------+  
+|  add in Repository.php  |
++-------------------------+  
+protected $fillable = [
+	'url', 'description'
+];
+
