@@ -255,4 +255,153 @@ use App\Models\Repository;
 		]);
 	}
 
++-----------------------------------+  
+|  add in RepositoryController.php  |
++-----------------------------------+  
+	public function destroy(Repository $repository)
+	{
+		$repository->delete();
 
+		return redirect()->route('repositories.index');
+	}
+
++---------------------------------------+  
+|  add in RepositoryControllerTest.php  |
++---------------------------------------+  
+	public function test_update_policy()
+	{
+		$user = User::factory()->create();
+		$repository = Repository::factory()->create();
+
+		$data = [
+			'url' => $this->faker->url,
+			'description' => $this->faker->text,
+		];
+
+
+		$this->actingAs($user)
+			 ->put("repositories/$repository->id", $data)
+			 ->assertStatus(403);
+
+	}
+
+	public function test_destroy_policy()
+	{
+		$user = User::factory()->create();
+		$repository = Repository::factory()->create(['user_id' => $user->id]);
+
+
+		$this->actingAs($user)
+			 ->delete("repositories/$repository->id")
+			 ->assertRedirect("repositories");
+
+		$this->assertDatabaseMissing('repositories', [
+			'id' => $repository->id,
+			'url' => $repository->url,
+			'description' => $repository->description,
+		]);
+	}
+
++--------------------------------------+  
+|  modify in RepositoryController.php  |
++--------------------------------------+  
+	public function update(Request $request, Repository $repository)
+	{
+		$request->validate([
+			'url' => 'required',
+			'description' => 'required'
+		]);
+
+		if ($request->user()->id != $repository->user_id) abort(403);
+
+		$repository->update($request->all());
+
+		return redirect()->route('repositories.edit', $repository);
+	}
+
+	public function destroy(Request $request, Repository $repository)
+	{
+		if ($request->user()->id != $repository->user_id) abort(403);
+		$repository->delete();
+
+		return redirect()->route('repositories.index');
+	}
+
++---------------------------------------+  
+|  add in RepositoryControllerTest.php  |
++---------------------------------------+  
+	public function test_index_empty()
+	{
+		Repository::factory()->create(); // user_id 1
+
+		$user = User::factory()->create(); // id = 2
+
+		$response = $this
+			->actingAs($user)
+			->get('repositories')
+			->assertStatus(200)
+			->assertSee('No hay repositorios creados');
+	}
+
+	public function test_index_with_data()
+	{
+		$user = User::factory()->create();
+		$repository = Repository::factory()->create(['user_id' => $user->id]);
+
+
+		$this
+			->actingAs($user)
+			->get('repositories')
+			->assertStatus(200)
+			->assertSee($repository->id)
+			->assertSee($repository->url);
+	}
+
++--------------------------------------+  
+|  modify in RepositoryController.php  |
++--------------------------------------+  
+	public function index(Request $request)
+	{
+		return view('repositories.index', [
+			'repositories' => $request->user()->repositories,
+		]);
+	}
+
+
++-------------------------------------------------------+  
+|  add in resources/views/repositories/index.blade.php  |
++-------------------------------------------------------+  
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Dashboard') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-4">
+							<table>
+								<thead>
+									<tr>
+										<th>ID</th>
+										<th>Enlace</th>
+									</tr>
+								</thead>
+								<tbody>
+									@forelse ($repositories as $repository)
+										<tr>
+											<td class="border px-4 py-2">{{ $repository->id }}</td>
+											<td class="border px-4 py-2">{{ $repository->url }}</td>
+										</tr>
+									@empty
+										<tr>
+											<td colspan="2">No hay repositorios creados</td>
+										</tr>
+									@endforelse
+								</tbody>
+							</table>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
