@@ -405,3 +405,118 @@ use App\Models\Repository;
         </div>
     </div>
 </x-app-layout>
+
++------------------------------------------+  
+|  modify in RepositoryControllerTest.php  |
++------------------------------------------+
+	public function test_show()
+	{
+		$user = User::factory()->create();
+		$repository = Repository::factory()->create(['user_id' => $user->id]);
+
+		$response = $this->actingAs($user)
+			 ->get("repositories/$repository->id")
+			 ->assertStatus(302);
+	}
+
+	public function test_show_policy()
+	{
+		$user = User::factory()->create();
+		$repository = Repository::factory()->create();
+
+		$this->actingAs($user)
+			 ->get("repositories/$repository->id")
+			 ->assertStatus(403);
+
+	}
+
++--------------------------------------+  
+|  modify in RepositoryController.php  |
++--------------------------------------+  
+	public function show(Request $request, Repository $repository)
+	{
+		if ($request->user()->id != $repository->user_id) abort(403);
+
+		return redirect()->route('repositories.show', compact('repository'));
+	}
+
+
++-------------------------------------------------------+  
+|  add in resources/views/repositories/show.blade.php  |
++-------------------------------------------------------+
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Profile') }}
+        </h2>
+    </x-slot>
+
+    <div>
+        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+            @if (Laravel\Fortify\Features::canUpdateProfileInformation())
+                @livewire('profile.update-profile-information-form')
+
+                <x-jet-section-border />
+            @endif
+
+            @if (Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::updatePasswords()))
+                <div class="mt-10 sm:mt-0">
+                    @livewire('profile.update-password-form')
+                </div>
+
+                <x-jet-section-border />
+            @endif
+
+            @if (Laravel\Fortify\Features::canManageTwoFactorAuthentication())
+                <div class="mt-10 sm:mt-0">
+                    @livewire('profile.two-factor-authentication-form')
+                </div>
+
+                <x-jet-section-border />
+            @endif
+
+            <div class="mt-10 sm:mt-0">
+                @livewire('profile.logout-other-browser-sessions-form')
+            </div>
+
+            @if (Laravel\Jetstream\Jetstream::hasAccountDeletionFeatures())
+                <x-jet-section-border />
+
+                <div class="mt-10 sm:mt-0">
+                    @livewire('profile.delete-user-form')
+                </div>
+            @endif
+        </div>
+    </div>
+</x-app-layout>
+
++-------------------------------------------------------+  
+|  add in resources/views/repositories/index.blade.php  |
++-------------------------------------------------------+  
+							<table>
+								<thead>
+									<tr>
+										<th>ID</th>
+										<th>Enlace</th>
+										<th>&nsbp;</th>
+									</tr>
+								</thead>
+								<tbody>
+									@forelse ($repositories as $repository)
+										<tr>
+											<td class="border px-4 py-2">{{ $repository->id }}</td>
+											<td class="border px-4 py-2">{{ $repository->url }}</td>
+											<td class="px-4 py-2">
+												<a href="{{ route('repositories.show', $repository) }}">Ver</a>
+											</td>
+											<td class="px-4 py-2">
+												<a href="{{ route('repositories.edit', $repository) }}">Editar</a>
+											</td>
+										</tr>
+									@empty
+										<tr>
+											<td colspan="4">No hay repositorios creados</td>
+										</tr>
+									@endforelse
+								</tbody>
+							</table>
