@@ -520,3 +520,125 @@ use App\Models\Repository;
 									@endforelse
 								</tbody>
 							</table>
+
+
++---------------------------------------+  
+|  add in RepositoryControllerTest.php  |
++---------------------------------------+
+	public function test_edit()
+	{
+		$user = User::factory()->create();
+		$repository = Repository::factory()->create(['user_id' => $user->id]);
+
+		$response = $this->actingAs($user)
+			 ->get("repositories/$repository->id/edit")
+			 ->assertStatus(200)
+		 	 ->assertSee($repository->url)
+		 	 ->assertSee($repository->description);
+	}
+
+	public function test_edit_policy()
+	{
+		$user = User::factory()->create(); // id = 1
+		$repository = Repository::factory()->create(); // user_id = 2
+
+		$this->actingAs($user)
+			 ->get("repositories/$repository->id/edit")
+			 ->assertStatus(403);
+
+	}
+
++-----------------------------------+  
+|  add in RepositoryController.php  |
++-----------------------------------+
+	public function edit(Request $request, Repository $repository)
+	{
+		if ($request->user()->id != $repository->user_id) abort(403);
+
+		return view('repositories.edit', compact('repository'));
+	}
+
++-------------------------------------------------------+  
+|  add in resources/views/repositories/index.blade.php  |
++-------------------------------------------------------+  
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Dashboard') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-4">
+							<form action="{{ route('repositories.update', $repository) }}" method="POST" class="max-w-mg">
+								@csrf
+								@method('PUT')
+
+								<label class="block font-medium text-sm text-gray-700">URL *</label>
+								<input type="text" name="url" value="{{ $repository->url }}" class="form-input w-full rounded-md shadow-sm">
+
+								<label class="block font-medium text-sm text-gray-700">Descripción *</label>
+								<textarea type="text" name="description" class="form-input w-full rounded-md shadow-sm">{{ $repository->description }}</textarea>
+
+								<hr class="my-4">
+
+								<input type="submit" value="Editar" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-md">
+
+							</form>
+						</div>
+        </div>
+    </div>
+</x-app-layout>
+
++---------------------------------------+  
+|  add in RepositoryControllerTest.php  |
++---------------------------------------+
+	public function test_create()
+	{
+		$user = User::factory()->create();
+
+		$this->actingAs($user)
+			 ->get("repositories/create")
+			 ->assertStatus(200);
+	}
+
++-----------------------------------+  
+|  add in RepositoryController.php  |
++-----------------------------------+
+	public function create()
+	{
+		return view('repositories.create');
+	}
+
++-------------------------------------------------------+  
+|  add in resources/views/repositories/index.blade.php  |
++-------------------------------------------------------+
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Dashboard') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-4">
+							<form action="{{ route('repositories.store') }}" method="POST" class="max-w-mg">
+								@csrf
+
+								<label class="block font-medium text-sm text-gray-700">URL *</label>
+								<input type="text" name="url"  class="form-input w-full rounded-md shadow-sm">
+
+								<label class="block font-medium text-sm text-gray-700">Descripción *</label>
+								<textarea type="text" name="description" class="form-input w-full rounded-md shadow-sm"></textarea>
+
+								<hr class="my-4">
+
+								<input type="submit" value="Guardar" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-md">
+
+							</form>
+						</div>
+        </div>
+    </div>
+</x-app-layout>
