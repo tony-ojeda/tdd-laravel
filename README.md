@@ -18,13 +18,13 @@ Crud Ropositories
 ### VIEW
 
 ### PRINCIPAL
-![](https://github.com/tony-ojeda/tdd-laravel/public/img/public/home_repositories.png)
+![](https://github.com/tony-ojeda/tdd-laravel/blob/main/public/img/home_repositories.png)
 
 ### CRUD
-![](https://github.com/tony-ojeda/tdd-laravel/public/img/public/user_repositories.png)
+![](https://github.com/tony-ojeda/tdd-laravel/blob/main//public/img/user_repositories.png)
 
 ### TEST REPOSITORIES
-![](https://github.com/tony-ojeda/tdd-laravel/public/img/public/test_repositories.png)
+![](https://github.com/tony-ojeda/tdd-laravel/blob/main//public/img/test_repositories.png)
 
 ### INSTALL
 `composer install`
