@@ -13,7 +13,7 @@
 									<tr>
 										<th>ID</th>
 										<th>Enlace</th>
-										<th>&nsbp;</th>
+										<th>-</th>
 									</tr>
 								</thead>
 								<tbody>
