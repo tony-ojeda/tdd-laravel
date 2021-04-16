@@ -752,3 +752,184 @@ use App\Models\Repository;
             <x-jet-responsive-nav-link href="{{ route('repositories.index') }}" :active="request()->routeIs('repositories*')">
                 Repositories
             </x-jet-responsive-nav-link>
+
+	
+	$php artisan make:request RepositoryRequest
+
++--------------------------------+  
+|  add in RepositoryRequest.php  |
++--------------------------------+  
+	public function authorize()
+	{
+		return true;
+	}
+
+	public function rules()
+	{
+		return [
+			'url' => 'required',
+			'description' => 'required'
+		];
+	}
+
++--------------------------------------+  
+|  modify in RepositoryController.php  |
++--------------------------------------+  
+use App\Http\Requests\RepositoryRequest;
+.
+.
+	public function store(RepositoryRequest $request)
+	{
+		$request->user()->repositories()->create($request->all());
+
+		return redirect()->route('repositories.index');
+	}
+
+	public function update(RepositoryRequest $request, Repository $repository)
+	{
+		if ($request->user()->id != $repository->user_id) abort(403);
+
+		$repository->update($request->all());
+
+		return redirect()->route('repositories.edit', $repository);
+	}
+
+$php artisan make:policy RepositoryPolicy
+
+
++-------------------------------+  
+|  add in RepositoryPolicy.php  |
++-------------------------------+  
+use App\Models\Repository;
+.
+.
+	public function pass(User $user, Repository $repository) 
+	{
+		return $user->id == $repository->user_id;
+	}
+
++-------------------------------+  
+|  add in RepositoryPolicy.php  |
++-------------------------------+  
+    protected $policies = [
+      'App\Models\Repository' => 'App\Policies\RepositoryPolicy',
+    ];
+
++----------------------------------+  
+|  add in AuthServiceProvider.php  |
++----------------------------------+
+    protected $policies = [
+      'App\Models\Repository' => 'App\Policies\RepositoryPolicy',
+    ];
+
++--------------------------------------+  
+|  modify in RepositoryController.php  |
++--------------------------------------+
+class RepositoryController extends Controller
+{
+	public function index()
+	{
+		return view('repositories.index', [
+			'repositories' => auth()->user()->repositories,
+		]);
+	}
+
+	public function show(Repository $repository)
+	{
+		$this->authorize('pass', $repository);
+
+		return view('repositories.show', compact('repository'));
+	}
+
+	public function create()
+	{
+		return view('repositories.create');
+	}
+
+	public function store(RepositoryRequest $request)
+	{
+		$request->user()->repositories()->create($request->all());
+
+		return redirect()->route('repositories.index');
+	}
+
+	public function edit(Repository $repository)
+	{
+		$this->authorize('pass', $repository);
+
+		return view('repositories.edit', compact('repository'));
+	}
+
+	public function update(RepositoryRequest $request, Repository $repository)
+	{
+		/* if ($request->user()->id != $repository->user_id) abort(403); */
+		$this->authorize('pass', $repository);
+
+		$repository->update($request->all());
+
+		return redirect()->route('repositories.edit', $repository);
+	}
+
+	public function destroy(Repository $repository)
+	{
+		$this->authorize('pass', $repository);
+
+		$repository->delete();
+
+		return redirect()->route('repositories.index');
+	}
+}
+
++----------------------------------------------------------+  
+|  modify in resources/views/repositories/index.blade.php  |
++----------------------------------------------------------+  
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+					<p class="text-right mb-4">
+					<a href="{{ route('repositories.create') }}" 
+						class="bg-blue-500 text-white font-bold py-2 px-4 rounded-md text-xs"
+						>
+						Agregar un nuevo repositorio
+					</a>
+					</p>
+            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-4">
+							<table>
+								<thead>
+									<tr>
+										<th>ID</th>
+										<th>Enlace</th>
+										<th>&nbsp;</th>
+										<th>&nbsp;</th>
+										<th>&nbsp;</th>
+									</tr>
+								</thead>
+								<tbody>
+									@forelse ($repositories as $repository)
+										<tr>
+											<td class="border px-4 py-2">{{ $repository->id }}</td>
+											<td class="border px-4 py-2">{{ $repository->url }}</td>
+											<td class="px-4 py-2">
+												<a href="{{ route('repositories.show', $repository) }}">Ver</a>
+											</td>
+											<td class="px-4 py-2">
+												<a href="{{ route('repositories.edit', $repository) }}">Editar</a>
+											</td>
+											<td class="px-4 py-2">
+												<form action="{{route('repositories.destroy', $repository)}}" method="POST">
+													@csrf
+													@method('DElETE')
+
+													<input type="submit" value="Eliminar" class="px-4 rounded-md bg-red-500 text-white">
+												</form>
+											</td>
+										</tr>
+									@empty
+										<tr>
+											<td colspan="5">No hay repositorios creados</td>
+										</tr>
+									@endforelse
+								</tbody>
+							</table>
+            </div>
+        </div>
+    </div>
